@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Định nghĩa Theme ngay trong CSS nếu cần (thay cho tailwind.config.js) */
+@theme {
+  --color-brand: #3b82f6;
+}
+
+/* Base style vẫn giữ nguyên như cũ */
+@layer base {
+  body {
+    @apply bg-gray-900 text-white m-0 p-0 overscroll-none select-none;
+  }
+}
