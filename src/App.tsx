@@ -12,6 +12,13 @@ const playBeep = (audioRef: React.RefObject<HTMLAudioElement | null>) => {
   });
 };
 
+// --- HELPER: Format seconds as m:ss ---
+const formatTime = (totalSeconds: number): string => {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
 export default function App() {
   const { status, sets, currentSetIndex, restTime, startWorkout, completeSet, resetWorkout } = useWorkoutStore();
   useWakeLock(status === 'ACTIVE' || status === 'REST');
@@ -59,6 +66,15 @@ export default function App() {
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [status, timeLeft, restTime]);
+
+  // --- REP TIMER (ascending counter for ACTIVE state) ---
+  const [repSeconds, setRepSeconds] = useState(0);
+  useEffect(() => {
+    if (status !== 'ACTIVE') return;
+    setRepSeconds(0);
+    const timer = setInterval(() => setRepSeconds((prev) => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, [status, currentSetIndex]);
 
   // --- MÀN HÌNH SETUP (Minimalist & Customizable) ---
   if (status === 'SETUP') {
@@ -123,8 +139,11 @@ export default function App() {
         onClick={completeSet}
         className="flex flex-col items-center justify-center min-h-screen bg-black text-white cursor-pointer select-none"
       >
-        <p className="text-gray-500 text-sm tracking-[0.3em] absolute top-12 uppercase">
+        <p className="text-gray-500 text-sm tracking-[0.3em] absolute top-12 left-1/2 -translate-x-1/2 uppercase">
           Set {currentSetIndex + 1} / {sets.length}
+        </p>
+        <p className="text-gray-600 text-sm font-mono absolute top-12 right-8">
+          {formatTime(repSeconds)}
         </p>
         <h2 className="text-[12rem] font-light tracking-tighter leading-none">{sets[currentSetIndex]}</h2>
         <p className="text-gray-700 text-xs tracking-[0.2em] absolute bottom-12 uppercase">Tap to complete</p>
