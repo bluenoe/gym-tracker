@@ -1,10 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWorkoutStore } from './store/useWorkoutStore';
 import { useWakeLock } from './hooks/useWakeLock';
+
+// --- HELPER: Play beep sound ---
+const playBeep = (audioRef: React.RefObject<HTMLAudioElement | null>) => {
+  const audio = audioRef.current;
+  if (!audio) return;
+  audio.currentTime = 0;
+  audio.play().catch(() => {
+    // Silently ignore autoplay restrictions
+  });
+};
 
 export default function App() {
   const { status, sets, currentSetIndex, restTime, startWorkout, completeSet, resetWorkout } = useWorkoutStore();
   useWakeLock(status === 'ACTIVE' || status === 'REST');
+
+  // --- PERSISTENT AUDIO REF (avoid recreating on every tick) ---
+  const beepRef = useRef<HTMLAudioElement | null>(null);
+  if (!beepRef.current) {
+    beepRef.current = new Audio('/beep.mp3');
+    beepRef.current.preload = 'auto';
+  }
 
   // --- LOCAL STATE CHO SETUP FORM ---
   const [draftSets, setDraftSets] = useState<number[]>([15, 12, 10]);
@@ -22,13 +39,24 @@ export default function App() {
   // --- LOGIC COUNTDOWN CHO REST ---
   const [timeLeft, setTimeLeft] = useState(restTime);
   useEffect(() => {
-    let timer: number;
-    if (status === 'REST' && timeLeft > 0) {
-      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0 && status === 'REST') {
-      useWorkoutStore.setState((s) => ({ status: 'ACTIVE', currentSetIndex: s.currentSetIndex + 1 }));
+    if (status !== 'REST') return;
+
+    if (timeLeft === 0) {
+      playBeep(beepRef);
+      useWorkoutStore.setState((s) => ({
+        status: 'ACTIVE',
+        currentSetIndex: s.currentSetIndex + 1,
+      }));
       setTimeLeft(restTime);
+      return;
     }
+
+    // Play beep at 3, 2, 1
+    if (timeLeft <= 3) {
+      playBeep(beepRef);
+    }
+
+    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [status, timeLeft, restTime]);
 
