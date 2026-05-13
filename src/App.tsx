@@ -6,7 +6,20 @@ export default function App() {
   const { status, sets, currentSetIndex, restTime, startWorkout, completeSet, resetWorkout } = useWorkoutStore();
   useWakeLock(status === 'ACTIVE' || status === 'REST');
 
-  // Logic Đếm ngược cho màn hình nghỉ
+  // --- LOCAL STATE CHO SETUP FORM ---
+  const [draftSets, setDraftSets] = useState<number[]>([15, 12, 10]);
+  const [draftRest, setDraftRest] = useState<number>(60);
+
+  const updateSetDraft = (index: number, value: number) => {
+    const newSets = [...draftSets];
+    newSets[index] = value || 0;
+    setDraftSets(newSets);
+  };
+
+  const addSet = () => setDraftSets([...draftSets, 10]);
+  const removeSet = () => setDraftSets(draftSets.slice(0, -1));
+
+  // --- LOGIC COUNTDOWN CHO REST ---
   const [timeLeft, setTimeLeft] = useState(restTime);
   useEffect(() => {
     let timer: number;
@@ -19,57 +32,105 @@ export default function App() {
     return () => clearInterval(timer);
   }, [status, timeLeft, restTime]);
 
-  // --- MÀN HÌNH SETUP ---
+  // --- MÀN HÌNH SETUP (Minimalist & Customizable) ---
   if (status === 'SETUP') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6">
-        <h1 className="text-3xl font-bold mb-8 text-gray-400">THIẾT LẬP BUỔI TẬP</h1>
-        <div className="w-full max-w-sm space-y-4">
-          <button
-            onClick={() => startWorkout([15, 12, 10], 60)}
-            className="w-full py-6 bg-blue-600 rounded-2xl text-xl font-bold active:scale-95 transition"
-          >
-            Mặc định: 3 Set (15-12-10)
-          </button>
-          <p className="text-center text-gray-500 italic">Bà có thể tự chế thêm input nhập set sau nha.</p>
+      <div className="flex flex-col min-h-screen bg-black text-white p-8">
+        <h1 className="text-sm tracking-[0.3em] text-gray-500 uppercase mb-12">Workout Configuration</h1>
+
+        <div className="space-y-8 flex-1">
+          {/* Tùy chỉnh Sets */}
+          <div>
+            <div className="flex justify-between items-end mb-4">
+              <h2 className="text-xl font-light tracking-wide">SETS & REPS</h2>
+              <div className="flex gap-4">
+                <button onClick={removeSet} disabled={draftSets.length <= 1} className="text-gray-500 disabled:opacity-20 text-2xl font-light">-</button>
+                <button onClick={addSet} className="text-white text-2xl font-light">+</button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {draftSets.map((rep, index) => (
+                <div key={index} className="flex justify-between items-center border-b border-gray-800 pb-2">
+                  <span className="text-gray-400 font-mono text-sm">SET {index + 1}</span>
+                  <input
+                    type="number"
+                    value={rep}
+                    onChange={(e) => updateSetDraft(index, parseInt(e.target.value))}
+                    className="bg-transparent text-right text-2xl font-light focus:outline-none w-20"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tùy chỉnh Rest Time */}
+          <div className="pt-6">
+            <div className="flex justify-between items-center border-b border-gray-800 pb-2">
+              <h2 className="text-xl font-light tracking-wide">REST (SEC)</h2>
+              <input
+                type="number"
+                value={draftRest}
+                onChange={(e) => setDraftRest(parseInt(e.target.value) || 0)}
+                className="bg-transparent text-right text-2xl font-light focus:outline-none w-20"
+              />
+            </div>
+          </div>
         </div>
+
+        <button
+          onClick={() => startWorkout(draftSets, draftRest)}
+          className="w-full py-5 mt-8 bg-white text-black text-sm tracking-[0.2em] uppercase font-bold active:scale-95 transition-transform"
+        >
+          Begin
+        </button>
       </div>
     );
   }
 
-  // --- MÀN HÌNH ACTIVE (Đang tập) ---
+  // --- MÀN HÌNH ACTIVE (Đang tập - Minimalist) ---
   if (status === 'ACTIVE') {
     return (
       <div
         onClick={completeSet}
-        className="flex flex-col items-center justify-center min-h-screen bg-black cursor-pointer select-none"
+        className="flex flex-col items-center justify-center min-h-screen bg-black text-white cursor-pointer select-none"
       >
-        <p className="text-blue-500 text-2xl font-bold mb-4 uppercase tracking-widest">
+        <p className="text-gray-500 text-sm tracking-[0.3em] absolute top-12 uppercase">
           Set {currentSetIndex + 1} / {sets.length}
         </p>
-        <h2 className="text-[15rem] font-black leading-none">{sets[currentSetIndex]}</h2>
-        <p className="text-gray-500 text-xl mt-10">XONG THÌ CHẠM VÀO MÀN HÌNH</p>
+        <h2 className="text-[12rem] font-light tracking-tighter leading-none">{sets[currentSetIndex]}</h2>
+        <p className="text-gray-700 text-xs tracking-[0.2em] absolute bottom-12 uppercase">Tap to complete</p>
       </div>
     );
   }
 
-  // --- MÀN HÌNH REST (Đang nghỉ) ---
+  // --- MÀN HÌNH REST (Đang nghỉ - Minimalist) ---
   if (status === 'REST') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-blue-900 transition-colors duration-500">
-        <p className="text-2xl font-bold mb-4 uppercase">Nghỉ đi bà...</p>
-        <h2 className="text-[12rem] font-mono font-black">{timeLeft}s</h2>
-        <button onClick={() => setTimeLeft(0)} className="mt-8 px-8 py-4 bg-white/10 rounded-full">Bỏ qua nghỉ</button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white transition-colors duration-700 select-none">
+        <p className="text-gray-500 text-sm tracking-[0.3em] absolute top-12 uppercase">Resting</p>
+        <h2 className="text-[10rem] font-light font-mono leading-none">{timeLeft}</h2>
+        <button
+          onClick={() => setTimeLeft(0)}
+          className="absolute bottom-12 text-gray-500 text-xs tracking-[0.2em] uppercase border-b border-gray-700 pb-1"
+        >
+          Skip Rest
+        </button>
       </div>
     );
   }
 
   // --- MÀN HÌNH FINISHED ---
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen text-center">
-      <h2 className="text-6xl font-bold mb-4">XONG RỒI! 🔥</h2>
-      <p className="text-gray-400 mb-10">Bà giỏi lắm, đi tắm thôi.</p>
-      <button onClick={resetWorkout} className="px-10 py-4 bg-green-600 rounded-xl font-bold">TẬP TIẾP BÀI KHÁC</button>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white text-center">
+      <h2 className="text-4xl font-light tracking-widest mb-2 uppercase">Complete</h2>
+      <p className="text-gray-500 text-sm tracking-[0.1em] mb-12">Session recorded.</p>
+      <button
+        onClick={resetWorkout}
+        className="px-8 py-4 border border-white text-sm tracking-[0.2em] uppercase hover:bg-white hover:text-black transition-colors"
+      >
+        New Session
+      </button>
     </div>
   );
 }
